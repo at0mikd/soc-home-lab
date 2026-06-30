@@ -1,0 +1,18 @@
+# --- Harness de Claude Code: herramienta LOCAL, no se publica ---
+/CLAUDE.md
+/.claude/
+/plantillas/
+/docs/guia-de-voz.md
+/docs/etica.md
+
+# --- Secretos: nunca al repo ---
+.env
+*.env
+*.key
+*.pem
+secrets/
+credentials*
+
+# --- Capturas o dumps con datos sensibles (revisar antes de quitar) ---
+*-raw.png
+dumps/
