@@ -44,11 +44,12 @@ Más adelante se suma un endpoint en Azure para telemetría de ataques reales de
 ## Cómo está organizado el repo
 
 - `docs/decisiones/` — ADRs: por qué elegí cada cosa y qué descarté.
-- `docs/writeups/` — detecciones e incidentes, con mapeo a MITRE ATT&CK.
-- `bitacora/` — notas crudas del día: qué intenté, qué rompió.
-- `lab/` — configs reproducibles (reglas Wazuh, scripts de setup).
-- `architecture/`, `docker/`, `kubernetes/`, `wazuh-config/`, `setup/` — estructura para
-  los componentes del diferenciador (vacías por ahora).
+- `docs/writeups/` — detecciones e incidentes, con mapeo a MITRE ATT&CK (se crea con el primer writeup).
+- `bitacora/` — notas crudas del día: qué intenté, qué rompió (se crea con la primera entrada).
+- `setup/`, `wazuh-config/`, `scripts/` — configs y guías reproducibles del SIEM.
+- `incident-reports/` — registros de respuesta a incidentes.
+- `architecture/`, `docker/`, `kubernetes/`, `jenkins/` — estructura para los
+  componentes del diferenciador (vacías por ahora).
 
 ## Qué falta
 
