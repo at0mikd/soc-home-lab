@@ -1,18 +1,10 @@
 # soc-home-lab — Home lab de SOC
 
 Armo un home lab de SOC y documento el proceso en público: qué monté, qué rompí y cómo
-lo detecté. El objetivo es un puesto de **SOC Analyst Jr**, y el repo es la evidencia de
-cómo trabajo, no un folleto.
+lo detecté.
 
 Base: fundamentos de SOC (SIEM, detección, respuesta) sobre Wazuh. Diferenciador:
-monitoreo de **infraestructura moderna** — containers, Kubernetes y pipelines CI/CD —
-una vez que los fundamentos están firmes.
-
-## Estado
-
-Recién arrancado. **Todavía no hay nada construido ni probado.** Este README es el mapa;
-se va llenando a medida que cada pieza pasa por el loop diseñar → construir → probar →
-documentar. Si una fila dice "planeado", es planeado: no lo corrí.
+monitoreo de **infraestructura moderna** — containers, Kubernetes y pipelines de CI/CD.
 
 ## Roadmap
 
@@ -39,8 +31,6 @@ documentar. Si una fila dice "planeado", es planeado: no lo corrí.
    (atacante = el host, con hydra contra la VM víctima)
 ```
 
-Más adelante se suma un endpoint en Azure para telemetría de ataques reales de internet.
-
 ## Cómo está organizado el repo
 
 - `docs/decisiones/` — ADRs: por qué elegí cada cosa y qué descarté.
@@ -50,11 +40,3 @@ Más adelante se suma un endpoint en Azure para telemetría de ataques reales de
 - `incident-reports/` — registros de respuesta a incidentes.
 - `architecture/`, `docker/`, `kubernetes/`, `jenkins/` — estructura para los
   componentes del diferenciador (vacías por ahora).
-
-## Qué falta
-
-Todo. Ver el roadmap. La primera entrega real será el componente 1.
-
-## Créditos
-
-Wazuh y su documentación. Las fuentes puntuales de cada pieza se citan en su writeup.
