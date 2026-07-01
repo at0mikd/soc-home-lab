@@ -34,9 +34,8 @@ monitoreo de **infraestructura moderna** — containers, Kubernetes y pipelines 
 ## Cómo está organizado el repo
 
 - `docs/decisiones/` — ADRs: por qué elegí cada cosa y qué descarté.
-- `docs/writeups/` — detecciones e incidentes, con mapeo a MITRE ATT&CK (se crea con el primer writeup).
-- `bitacora/` — notas crudas del día: qué intenté, qué rompió (se crea con la primera entrada).
+- `docs/writeups/` — detecciones e incidentes, con mapeo a MITRE ATT&CK.
+- `bitacora/` — notas crudas del día: qué intenté, qué rompió.
 - `setup/`, `wazuh-config/`, `scripts/` — configs y guías reproducibles del SIEM.
 - `incident-reports/` — registros de respuesta a incidentes.
-- `architecture/`, `docker/`, `kubernetes/`, `jenkins/` — estructura para los
-  componentes del diferenciador (vacías por ahora).
+- `docker/`, `kubernetes/`, `jenkins/`, `architecture/` — componentes del diferenciador.
