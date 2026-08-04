@@ -1,0 +1,54 @@
+# Ubuntu 22.04 victim container for the SOC home lab.
+#
+# Runs an sshd (the brute-force target) and a Wazuh agent (4.14.5, pinned to
+# match the manager). Both are started by an init process so the container
+# behaves like a small Linux endpoint instead of a one-shot process.
+#
+# Notes for the next session:
+# - The wazuh-agent in this image is built from the .deb package. It expects
+#   systemd-style supervision. We use dumb-init as PID 1, which is enough to
+#   keep sshd and the agent alive across signal handling.
+# - The agent's /var/ossec/data is a named volume so enrollment state survives
+#   `docker compose down` (only `down -v` wipes it).
+# - /var/log is also a named volume so auth.log persists between runs and the
+#   Wazuh agent can read a real, growing logfile instead of stdout.
+
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    WAZUH_VERSION=4.14.5-1
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        dumb-init \
+        gnupg \
+        openssh-server && \
+    rm -rf /var/lib/apt/lists/* && \
+    curl -s -o /tmp/wazuh.key https://packages.wazuh.com/key/GPG-KEY-WAZUH && \
+    gpg --batch --yes --dearmor \
+        -o /usr/share/keyrings/wazuh.gpg /tmp/wazuh.key && \
+    echo "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt stable main" \
+        > /etc/apt/sources.list.d/wazuh.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        wazuh-agent=${WAZUH_VERSION} && \
+    rm -rf /var/lib/apt/lists/* /tmp/wazuh.key
+
+RUN mkdir -p /run/sshd && \
+    ssh-keygen -A && \
+    echo "LogLevel VERBOSE" >> /etc/ssh/sshd_config.d/00-lab.conf && \
+    echo "PermitRootLogin no" >> /etc/ssh/sshd_config.d/00-lab.conf && \
+    echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config.d/00-lab.conf
+
+# Default credentials. Intentionally weak: the lab generates brute-force
+# traffic against this account on purpose. The container is on an isolated
+# bridge network and the host port is mapped to 2222, not 22.
+RUN useradd -m -s /bin/bash labuser && \
+    echo 'labuser:labpass' | chpasswd
+
+EXPOSE 22
+
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["/bin/bash", "-c", "/usr/sbin/sshd && /var/ossec/bin/wazuh-agentd -f"]

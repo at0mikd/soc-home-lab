@@ -1,0 +1,151 @@
+# Wazuh single-node stack + victim container for the SOC home lab.
+#
+# Brings up three official Wazuh images plus a custom victim container
+# (sshd + wazuh-agent) on a user-defined bridge network.
+#
+# Image versions are pinned to 4.14.5 to match the agent version installed
+# in the victim container.
+#
+# Usage:
+#   docker compose up -d
+#   docker compose ps
+#   docker compose logs -f wazuh.manager
+#
+# Wipe everything (including stored alerts and custom rules):
+#   docker compose down -v
+#
+# See ../setup/README.md for the full operator guide.
+
+services:
+  wazuh.indexer:
+    image: wazuh/wazuh-indexer:4.14.5
+    hostname: wazuh.indexer
+    container_name: wazuh-indexer
+    restart: unless-stopped
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    environment:
+      - OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g
+    volumes:
+      - wazuh_indexer_data:/var/lib/wazuh-indexer
+    networks:
+      lab-net:
+        ipv4_address: 172.25.0.20
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -kfsS https://localhost:9200/_cluster/health | grep -E 'green|yellow' >/dev/null
+      interval: 30s
+      timeout: 10s
+      retries: 30
+      start_period: 120s
+
+  wazuh.manager:
+    image: wazuh/wazuh-manager:4.14.5
+    hostname: wazuh.manager
+    container_name: wazuh-manager
+    restart: unless-stopped
+    depends_on:
+      wazuh.indexer:
+        condition: service_healthy
+    environment:
+      - INDEXER_URL=https://wazuh.indexer:9200
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=SecretPassword
+      - FILEBEAT_SSL_VERIFICATION_MODE=full
+      - SSL_CERTIFICATE_AUTHORITIES=/etc/ssl/root-ca.pem
+      - SSL_CERTIFICATE=/etc/ssl/filebeat.pem
+      - SSL_KEY=/etc/ssl/filebeat.key
+      - API_USERNAME=wazuh-wui
+      - API_PASSWORD=MyS3cr37P450r.*-
+    volumes:
+      - wazuh_manager_data:/var/ossec/data
+      - ./conf/manager_ssl_certs:/etc/ssl:ro
+    ports:
+      - "1514:1514"   # agent enrollment + log shipping
+      - "55000:55000" # manager API (used by the dashboard)
+    networks:
+      lab-net:
+        ipv4_address: 172.25.0.30
+
+  wazuh.dashboard:
+    image: wazuh/wazuh-dashboard:4.14.5
+    hostname: wazuh.dashboard
+    container_name: wazuh-dashboard
+    restart: unless-stopped
+    depends_on:
+      wazuh.manager:
+        condition: service_started
+    environment:
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=SecretPassword
+      - WAZUH_API_URL=https://wazuh.manager
+      - DASHBOARD_USERNAME=kibanaserver
+      - DASHBOARD_PASSWORD=kibanaserver
+      - API_USERNAME=wazuh-wui
+      - API_PASSWORD=MyS3cr37P450r.*-
+    volumes:
+      - wazuh_dashboard_data:/var/lib/wazuh-dashboard
+      - ./conf/manager_ssl_certs:/etc/ssl:ro
+    ports:
+      - "443:443"     # dashboard web UI (HTTPS)
+    networks:
+      lab-net:
+        ipv4_address: 172.25.0.40
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -kfsS https://localhost:5601/status | grep -q 'red\|green\|yellow' || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 30
+      start_period: 120s
+
+  victim:
+    build:
+      context: .
+      dockerfile: Dockerfile.victim
+    image: soc-lab/victim:4.14.5
+    hostname: victim
+    container_name: victim
+    restart: unless-stopped
+    init: true
+    environment:
+      - WAZUH_MANAGER_SERVER=172.25.0.30
+    volumes:
+      - victim_data:/var/ossec/data
+      - victim_logs:/var/log
+      - ./conf/ossec.conf:/var/ossec/etc/ossec.conf:ro
+      - ./conf/sshd_config:/etc/ssh/sshd_config:ro
+    networks:
+      lab-net:
+        ipv4_address: 172.25.0.10
+    ports:
+      - "2222:22"     # host:2222 -> victim:22, so the host can hit ssh without sudo
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pgrep -x sshd >/dev/null && /var/ossec/bin/wazuh-agentd -t >/dev/null 2>&1
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+networks:
+  lab-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/24
+
+volumes:
+  wazuh_indexer_data:
+  wazuh_manager_data:
+  wazuh_dashboard_data:
+  victim_data:
+  victim_logs:

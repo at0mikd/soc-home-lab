@@ -95,3 +95,11 @@ Err:2 https://packages.wazuh.com/4.x/apt stable InRelease
 - Generar **fallos SSH a mano** (`ssh usuariofalso@192.168.56.103`) y verificar en el
   dashboard que disparan 5710/5716 y, tras el umbral, la 5712 — antes de tocar hydra
   y de escribir la regla custom.
+
+---
+
+**Nota posterior (2026-07-31):** Esta sesión se hizo sobre la VM `ubuntu-agent` con
+red host-only `192.168.56.0/24` en VirtualBox. Toda esa fase queda como historial;
+el lab migra a Docker y los pasos equivalentes (incluida la verificación de 5710/5716)
+viven ahora en `setup/README.md`. Ver `docs/decisiones/0002-migrar-vms-a-docker.md`
+(el ADR público equivalente está en `docs/decisions/0002-migrate-vms-to-docker.md`).

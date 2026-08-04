@@ -1,0 +1,28 @@
+# sshd config for the victim container.
+#
+# Kept minimal on purpose: the goal of this lab is to produce realistic
+# sshd auth-failure log lines that Wazuh's SSH rules can match. Anything
+# that does not contribute to that is left at the upstream default.
+
+Port 22
+Protocol 2
+
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+
+LoginGraceTime 30
+PermitRootLogin no
+StrictModes yes
+
+# Passwords are on so hydra has something to brute-force.
+# In production this would be `no` and keys would be the only path.
+PasswordAuthentication yes
+PubkeyAuthentication yes
+
+LogLevel VERBOSE
+
+PrintMotd no
+AcceptEnv LANG LC_*
+
+Subsystem sftp /usr/lib/openssh/sftp-server

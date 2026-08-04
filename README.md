@@ -1,41 +1,76 @@
-# soc-home-lab — Home lab de SOC
+# soc-home-lab — SOC home lab, built in public
 
-Armo un home lab de SOC y documento el proceso en público: qué monté, qué rompí y cómo
-lo detecté.
+I am putting together a SOC home lab and documenting the process in the open:
+what I built, what I broke, and how I detected it.
 
-Base: fundamentos de SOC (SIEM, detección, respuesta) sobre Wazuh. Diferenciador:
-monitoreo de **infraestructura moderna** — containers, Kubernetes y pipelines de CI/CD.
+Base: SOC fundamentals (SIEM, detection, response) on top of Wazuh. What makes
+this lab different from the textbook setup is the focus on **modern
+infrastructure** — containers, Kubernetes, and CI/CD pipelines.
 
 ## Roadmap
 
-| # | Componente | Competencia SOC | Estado |
+| # | Component | SOC skill it shows | Status |
 |---|---|---|---|
-| 1 | Wazuh base + detección SSH brute-force | SIEM, detección, ATT&CK | en curso |
-| 2 | Hardening del endpoint (SSH, ufw, fail2ban) | Linux / hardening | planeado |
-| 3 | Detección de escalada/persistencia local | Detección / ATT&CK | planeado |
-| 4 | Respuesta a incidente (caso simulado) | Respuesta a incidentes | planeado |
-| 5 | SOAR: Wazuh → n8n → Discord | Automatización / SOAR | planeado |
-| 6 | Threat intel: IOCs + correlación | Threat intelligence | planeado |
-| 7 | Docker host monitoring | Containers (diferenciador) | planeado |
-| 8 | Kubernetes monitoring | K8s (diferenciador) | planeado |
-| 9 | CI/CD: pipeline Jenkins + monitoreo | CI-CD (diferenciador) | planeado |
-| 10 | Endpoint en Azure reportando al SIEM | Nube | planeado |
-| 11 | Anexo: writeup de hallazgo IDOR (bug bounty) | — | planeado |
+| 1 | Wazuh base + SSH brute-force detection | SIEM, detection, ATT&CK | in progress |
+| 2 | Endpoint hardening (sshd, ufw, fail2ban) | Linux / hardening | planned |
+| 3 | Local privilege-escalation / persistence detection | Detection / ATT&CK | planned |
+| 4 | Incident response (simulated case) | Incident response | planned |
+| 5 | SOAR: Wazuh -> n8n -> Discord | Automation / SOAR | planned |
+| 6 | Threat intel: IOCs + correlation | Threat intelligence | planned |
+| 7 | Docker host monitoring | Containers (differentiator) | planned |
+| 8 | Kubernetes monitoring (Kustomize + minikube) | K8s (differentiator) | planned |
+| 9 | CI/CD: Jenkins pipeline + monitoring | CI-CD (differentiator) | planned |
+| 10 | Azure endpoint reporting into the SIEM | Cloud | planned |
+| 11 | Appendix: IDOR finding writeup (bug bounty) | - | planned |
 
-## Arquitectura (fase local)
+## Architecture (local phase)
 
 ```
-  Host
-   ├── VM "siem"     → Wazuh (manager + indexer + dashboard)
-   └── VM "victima"  → wazuh-agent + sshd, en red interna
-   (atacante = el host, con hydra contra la VM víctima)
+                  Host (laptop)
+                  - hydra / curl / n8n
+                          |
+                          v  +---------------- lab-net (172.25.0.0/24) -----------------+
+                          |   |                                                    |
+                          |   |  172.25.0.10   172.25.0.20   172.25.0.30   172.25.0.40
+                          |   |  victim        wazuh.indexer wazuh.manager  wazuh.dashboard
+                          |   |  ubuntu+       (OpenSearch)  (manager+     (web UI)
+                          |   |  sshd+                       agentd)
+                          |   |  wazuh-agent                  ^
+                          |   |  :22 (host 2222)              |
+                          |   |                                |
+                          |   +------ exposed: 1514, 55000, 443 ---------------------+
+                          +------------------------------------------------------>
 ```
 
-## Cómo está organizado el repo
+Everything runs in Docker. See [`setup/README.md`](setup/README.md) for the
+operator guide and [`docs/decisions/0002-migrate-vms-to-docker.md`](docs/decisions/0002-migrate-vms-to-docker.md)
+for why this used to be two VirtualBox VMs.
 
-- `docs/decisiones/` — ADRs: por qué elegí cada cosa y qué descarté.
-- `docs/writeups/` — detecciones e incidentes, con mapeo a MITRE ATT&CK.
-- `bitacora/` — notas crudas del día: qué intenté, qué rompió.
-- `setup/`, `wazuh-config/`, `scripts/` — configs y guías reproducibles del SIEM.
-- `incident-reports/` — registros de respuesta a incidentes.
-- `docker/`, `kubernetes/`, `jenkins/`, `architecture/` — componentes del diferenciador.
+## How the repo is organized
+
+- `docs/decisions/` — ADRs: why I picked each thing and what I dropped.
+- `docs/writeups/` — detections and incidents, mapped to MITRE ATT&CK.
+- `bitacora/` — raw daily notes: what I tried, what broke, what I left for
+  tomorrow.
+- `setup/` — `docker-compose.yml`, the victim `Dockerfile`, and the agent /
+  sshd configs to reproduce the stack.
+- `incident-reports/` — incident response records (populated as the lab
+  progresses).
+- `docker/`, `kubernetes/`, `jenkins/`, `architecture/` — components of the
+  differentiator, added as I get to them.
+
+## A note on language
+
+Everything in this repo is in English by design, including decisions, writeups
+and the configs that have human-readable comments. The reasoning is in
+[`docs/language.md`](docs/language.md). If you fork it and want bilingual
+docs, that is your call — I would not.
+
+## What this repo is not
+
+- A polished, finished product. It is the public trace of the work. Some
+  pieces are rough, some are wrong and I will tell you so.
+- A tutorial. The writeups are how I solved my problem, not the canonical
+  way to solve yours.
+- An excuse to overclaim. If a detection does not fire or a step did not
+  reproduce, that is in the writeup.

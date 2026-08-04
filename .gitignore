@@ -13,6 +13,10 @@
 secrets/
 credentials*
 
+# --- Certificados generados por el script oficial de Wazuh (ver setup/README.md).
+# Se generan en local; no se versionan. Si los rotás, se regeneran.
+setup/conf/manager_ssl_certs/
+
 # --- Capturas o dumps con datos sensibles (revisar antes de quitar) ---
 *-raw.png
 dumps/

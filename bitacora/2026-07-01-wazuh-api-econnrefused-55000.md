@@ -64,3 +64,13 @@ tras el boot. No lo toqué todavía.
 - Recién ahí, arrancar el enrolamiento del agente en `ubuntu-agent`:
   versión de Ubuntu (journald vs `/var/log/auth.log`), IP host-only, instalar y
   registrar el agente contra `192.168.56.101`.
+
+---
+
+**Nota posterior (2026-07-31):** El problema del `ECONNREFUSED :55000` venía del OVA
+de Wazuh, que no deja los servicios habilitados para auto-arranque. En el stack
+Docker (`setup/docker-compose.yml`) esto queda resuelto por la policy
+`restart: unless-stopped` y por `depends_on: service_healthy` entre el indexer y el
+manager. La deuda del `After=` ya no aplica. Ver
+`docs/decisiones/0002-migrar-vms-a-docker.md` y su equivalente público en inglés
+`docs/decisions/0002-migrate-vms-to-docker.md`.
