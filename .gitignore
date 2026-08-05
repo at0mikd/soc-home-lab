@@ -20,3 +20,6 @@ setup/conf/manager_ssl_certs/
 # --- Capturas o dumps con datos sensibles (revisar antes de quitar) ---
 *-raw.png
 dumps/
+
+# --- Screenshots del lab: pendientes de revisar y limpiar antes de publicar ---
+/screenshots/

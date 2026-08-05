@@ -1,22 +1,70 @@
 # Wazuh single-node stack + victim container for the SOC home lab.
 #
-# Brings up three official Wazuh images plus a custom victim container
-# (sshd + wazuh-agent) on a user-defined bridge network.
-#
-# Image versions are pinned to 4.14.5 to match the agent version installed
-# in the victim container.
+# The Wazuh services mirror the official wazuh/wazuh-docker v4.14.5
+# single-node/docker-compose.yml, with three changes for this lab:
+#   1. certs are mounted from conf/manager_ssl_certs/ (output of
+#      generate-indexer-certs.yml) instead of config/wazuh_indexer_ssl_certs/
+#   2. config files come from conf/ (opensearch.yml, internal_users.yml,
+#      opensearch_dashboards.yml, wazuh.yml, wazuh_manager.conf)
+#   3. a `victim` service (sshd + wazuh-agent) is added, and everything runs
+#      on the isolated `lab-net` bridge with fixed IPs.
 #
 # Usage:
 #   docker compose up -d
 #   docker compose ps
 #   docker compose logs -f wazuh.manager
-#
 # Wipe everything (including stored alerts and custom rules):
 #   docker compose down -v
 #
-# See ../setup/README.md for the full operator guide.
+# See setup/README.md for the full operator guide.
 
 services:
+  wazuh.manager:
+    image: wazuh/wazuh-manager:4.14.5
+    hostname: wazuh.manager
+    container_name: wazuh-manager
+    restart: unless-stopped
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 655360
+        hard: 655360
+    ports:
+      - "1514:1514"   # agent enrollment + log shipping
+      - "1515:1515"   # agent enrollment (port 1515)
+      - "55000:55000" # manager API (used by the dashboard)
+    environment:
+      - INDEXER_URL=https://wazuh.indexer:9200
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=SecretPassword
+      - FILEBEAT_SSL_VERIFICATION_MODE=full
+      - SSL_CERTIFICATE_AUTHORITIES=/etc/ssl/root-ca.pem
+      - SSL_CERTIFICATE=/etc/ssl/filebeat.pem
+      - SSL_KEY=/etc/ssl/filebeat.key
+      - API_USERNAME=wazuh-wui
+      - API_PASSWORD=MyS3cr37P450r.*-
+    volumes:
+      - wazuh_api_configuration:/var/ossec/api/configuration
+      - wazuh_etc:/var/ossec/etc
+      - wazuh_logs:/var/ossec/logs
+      - wazuh_queue:/var/ossec/queue
+      - wazuh_var_multigroups:/var/ossec/var/multigroups
+      - wazuh_integrations:/var/ossec/integrations
+      - wazuh_active_response:/var/ossec/active-response/bin
+      - wazuh_agentless:/var/ossec/agentless
+      - wazuh_wodles:/var/ossec/wodles
+      - filebeat_etc:/etc/filebeat
+      - filebeat_var:/var/lib/filebeat
+      - ./conf/manager_ssl_certs/root-ca-manager.pem:/etc/ssl/root-ca.pem
+      - ./conf/manager_ssl_certs/wazuh.manager.pem:/etc/ssl/filebeat.pem
+      - ./conf/manager_ssl_certs/wazuh.manager-key.pem:/etc/ssl/filebeat.key
+      - ./conf/wazuh_cluster/wazuh_manager.conf:/wazuh-config-mount/etc/ossec.conf
+    networks:
+      lab-net:
+        ipv4_address: 172.25.0.30
+
   wazuh.indexer:
     image: wazuh/wazuh-indexer:4.14.5
     hostname: wazuh.indexer
@@ -31,47 +79,28 @@ services:
         hard: 65536
     environment:
       - OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g
+    ports:
+      - "9200:9200"   # indexer HTTPS (cluster/health etc.)
     volumes:
       - wazuh_indexer_data:/var/lib/wazuh-indexer
+      - ./conf/manager_ssl_certs/root-ca.pem:/usr/share/wazuh-indexer/config/certs/root-ca.pem
+      - ./conf/manager_ssl_certs/wazuh.indexer-key.pem:/usr/share/wazuh-indexer/config/certs/wazuh.indexer.key
+      - ./conf/manager_ssl_certs/wazuh.indexer.pem:/usr/share/wazuh-indexer/config/certs/wazuh.indexer.pem
+      - ./conf/manager_ssl_certs/admin.pem:/usr/share/wazuh-indexer/config/certs/admin.pem
+      - ./conf/manager_ssl_certs/admin-key.pem:/usr/share/wazuh-indexer/config/certs/admin-key.pem
+      - ./conf/wazuh_indexer/opensearch.yml:/usr/share/wazuh-indexer/config/opensearch.yml
+      - ./conf/wazuh_indexer/internal_users.yml:/usr/share/wazuh-indexer/config/opensearch-security/internal_users.yml
     networks:
       lab-net:
         ipv4_address: 172.25.0.20
     healthcheck:
       test:
         - CMD-SHELL
-        - curl -kfsS https://localhost:9200/_cluster/health | grep -E 'green|yellow' >/dev/null
+        - curl -ksS -u admin:SecretPassword "https://localhost:9200/_cluster/health" | grep -E 'green|yellow' >/dev/null
       interval: 30s
       timeout: 10s
       retries: 30
       start_period: 120s
-
-  wazuh.manager:
-    image: wazuh/wazuh-manager:4.14.5
-    hostname: wazuh.manager
-    container_name: wazuh-manager
-    restart: unless-stopped
-    depends_on:
-      wazuh.indexer:
-        condition: service_healthy
-    environment:
-      - INDEXER_URL=https://wazuh.indexer:9200
-      - INDEXER_USERNAME=admin
-      - INDEXER_PASSWORD=SecretPassword
-      - FILEBEAT_SSL_VERIFICATION_MODE=full
-      - SSL_CERTIFICATE_AUTHORITIES=/etc/ssl/root-ca.pem
-      - SSL_CERTIFICATE=/etc/ssl/filebeat.pem
-      - SSL_KEY=/etc/ssl/filebeat.key
-      - API_USERNAME=wazuh-wui
-      - API_PASSWORD=MyS3cr37P450r.*-
-    volumes:
-      - wazuh_manager_data:/var/ossec/data
-      - ./conf/manager_ssl_certs:/etc/ssl:ro
-    ports:
-      - "1514:1514"   # agent enrollment + log shipping
-      - "55000:55000" # manager API (used by the dashboard)
-    networks:
-      lab-net:
-        ipv4_address: 172.25.0.30
 
   wazuh.dashboard:
     image: wazuh/wazuh-dashboard:4.14.5
@@ -79,8 +108,8 @@ services:
     container_name: wazuh-dashboard
     restart: unless-stopped
     depends_on:
-      wazuh.manager:
-        condition: service_started
+      wazuh.indexer:
+        condition: service_healthy
     environment:
       - INDEXER_USERNAME=admin
       - INDEXER_PASSWORD=SecretPassword
@@ -90,17 +119,22 @@ services:
       - API_USERNAME=wazuh-wui
       - API_PASSWORD=MyS3cr37P450r.*-
     volumes:
-      - wazuh_dashboard_data:/var/lib/wazuh-dashboard
-      - ./conf/manager_ssl_certs:/etc/ssl:ro
+      - ./conf/manager_ssl_certs/wazuh.dashboard.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard.pem
+      - ./conf/manager_ssl_certs/wazuh.dashboard-key.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard-key.pem
+      - ./conf/manager_ssl_certs/root-ca.pem:/usr/share/wazuh-dashboard/certs/root-ca.pem
+      - ./conf/wazuh_dashboard/opensearch_dashboards.yml:/usr/share/wazuh-dashboard/config/opensearch_dashboards.yml
+      - ./conf/wazuh_dashboard/wazuh.yml:/usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml
+      - wazuh_dashboard_config:/usr/share/wazuh-dashboard/data/wazuh/config
+      - wazuh_dashboard_custom:/usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom
     ports:
-      - "443:443"     # dashboard web UI (HTTPS)
+      - "5601:5601"    # dashboard web UI (HTTPS)
     networks:
       lab-net:
         ipv4_address: 172.25.0.40
     healthcheck:
       test:
         - CMD-SHELL
-        - curl -kfsS https://localhost:5601/status | grep -q 'red\|green\|yellow' || exit 1
+        - curl -ksS -o /dev/null -w '%{http_code}' https://localhost:5601/status || exit 1
       interval: 30s
       timeout: 10s
       retries: 30
@@ -122,11 +156,11 @@ services:
       - victim_logs:/var/log
       - ./conf/ossec.conf:/var/ossec/etc/ossec.conf:ro
       - ./conf/sshd_config:/etc/ssh/sshd_config:ro
+    ports:
+      - "2222:22"     # host:2222 -> victim:22, so the host can hit ssh without sudo
     networks:
       lab-net:
         ipv4_address: 172.25.0.10
-    ports:
-      - "2222:22"     # host:2222 -> victim:22, so the host can hit ssh without sudo
     healthcheck:
       test:
         - CMD-SHELL
@@ -145,7 +179,18 @@ networks:
 
 volumes:
   wazuh_indexer_data:
-  wazuh_manager_data:
-  wazuh_dashboard_data:
+  wazuh_api_configuration:
+  wazuh_etc:
+  wazuh_logs:
+  wazuh_queue:
+  wazuh_var_multigroups:
+  wazuh_integrations:
+  wazuh_active_response:
+  wazuh_agentless:
+  wazuh_wodles:
+  filebeat_etc:
+  filebeat_var:
+  wazuh_dashboard_config:
+  wazuh_dashboard_custom:
   victim_data:
   victim_logs:

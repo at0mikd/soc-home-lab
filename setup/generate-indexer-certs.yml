@@ -1,0 +1,18 @@
+# Adapted from wazuh/wazuh-docker @ v4.14.5 single-node/generate-indexer-certs.yml.
+# The upstream yml writes to ./config/wazuh_indexer_ssl_certs/. We override
+# the volume mount so the certs land directly under setup/conf/manager_ssl_certs/
+# where the wazuh.manager and wazuh.dashboard services expect them.
+#
+# Usage:
+#   cd setup
+#   docker compose -f generate-indexer-certs.yml run --rm generator
+
+services:
+  generator:
+    image: wazuh/wazuh-certs-generator:0.0.4
+    hostname: wazuh-certs-generator
+    environment:
+      - CERT_TOOL_VERSION=4.14
+    volumes:
+      - ./conf/manager_ssl_certs/:/certificates/
+      - ./conf/certs.yml:/config/certs.yml

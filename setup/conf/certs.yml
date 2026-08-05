@@ -1,0 +1,23 @@
+# Adapted from wazuh/wazuh-docker @ v4.14.5 single-node/config/certs.yml.
+#
+# The wazuh-certs-tool reads the `ip:` value and puts it into the certificate
+# SAN. Using the hostname here (instead of the lab-net IP) makes the SAN
+# contain DNS:wazuh.indexer / DNS:wazuh.manager / DNS:wazuh.dashboard, which
+# is what filebeat and the dashboard validate when they connect by name.
+# The containers resolve these names on the lab-net bridge network.
+
+nodes:
+  # Wazuh indexer server nodes
+  indexer:
+    - name: wazuh.indexer
+      ip: wazuh.indexer
+
+  # Wazuh manager nodes
+  server:
+    - name: wazuh.manager
+      ip: wazuh.manager
+
+  # Wazuh dashboard node
+  dashboard:
+    - name: wazuh.dashboard
+      ip: wazuh.dashboard

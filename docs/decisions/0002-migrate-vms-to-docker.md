@@ -36,9 +36,11 @@ Networking: a single user-defined bridge network `lab-net` (subnet
 `172.25.0.0/24`). The victim gets a fixed IP `172.25.0.10`. The attacker is the
 host machine, running hydra against the bridge IP.
 
-Persistence: named volumes (`wazuh_manager_data`, `wazuh_indexer_data`,
-`wazuh_dashboard_data`, `victim_data`). `docker compose down` keeps the data;
-`down -v` resets everything.
+Persistence: named volumes. The Wazuh services use the volume split from the
+official `wazuh/wazuh-docker` compose (`wazuh_etc`, `wazuh_logs`,
+`wazuh_queue`, `wazuh_indexer_data`, `wazuh_dashboard_config`, ...), plus
+`victim_data` and `victim_logs` for the victim. `docker compose down` keeps
+the data; `down -v` resets everything.
 
 ## Options considered
 
