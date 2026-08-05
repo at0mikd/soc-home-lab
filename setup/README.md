@@ -28,6 +28,10 @@ hit).
   under 300 MB.
 - ~5 GB of free disk for images and persistent volumes. The first pull is
   the slow one; after that, restarts are seconds.
+- (Roadmap items #8+) `kubectl` and `minikube` for the Kubernetes leg.
+  They are not required for the SSH brute-force detection covered by this
+  README. Install notes live in
+  [`bitacora/2026-08-04-host-setup-docker-k8s.md`](../bitacora/2026-08-04-host-setup-docker-k8s.md).
 
 ## First-time setup
 
@@ -121,6 +125,10 @@ failures) fires too. If neither fires, the agent is not reading
 - **`docker compose down` keeps the data.** Alerts, custom rules and the
   agent key all survive a plain `down`. Use `down -v` to wipe everything
   and start from a clean state.
+- **Docker Desktop on Linux is supported but not ideal.** minikube's first
+  `start` against Docker Desktop is slower than against Docker Engine, and
+  minikube prints a warning recommending Docker Engine instead. The lab
+  works, just budget extra minutes for the first pull.
 
 ## Reset
 
