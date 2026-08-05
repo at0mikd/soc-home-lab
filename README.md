@@ -59,18 +59,3 @@ for why this used to be two VirtualBox VMs.
 - `docker/`, `kubernetes/`, `jenkins/`, `architecture/` — components of the
   differentiator, added as I get to them.
 
-## A note on language
-
-Everything in this repo is in English by design, including decisions, writeups
-and the configs that have human-readable comments. The reasoning is in
-[`docs/language.md`](docs/language.md). If you fork it and want bilingual
-docs, that is your call — I would not.
-
-## What this repo is not
-
-- A polished, finished product. It is the public trace of the work. Some
-  pieces are rough, some are wrong and I will tell you so.
-- A tutorial. The writeups are how I solved my problem, not the canonical
-  way to solve yours.
-- An excuse to overclaim. If a detection does not fire or a step did not
-  reproduce, that is in the writeup.
